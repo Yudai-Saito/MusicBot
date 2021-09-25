@@ -1,37 +1,54 @@
-FROM alpine:edge
+FROM ubuntu
 
 # Add project source
 WORKDIR /usr/src/musicbot
 COPY . ./
 
 # Install dependencies
-RUN apk update \
-&& apk add --no-cache \
+RUN apt update \
+&& apt install -y \
+  curl \
   ca-certificates \
   ffmpeg \
-  opus \
-  python3 \
   libsodium-dev \
 \
 # Install build dependencies
-&& apk add --no-cache --virtual .build-deps \
-  gcc \
-  git \
+&& apt install -y \
+  build-essential \
   libffi-dev \
-  make \
-  musl-dev \
-  python3-dev \
+  libssl-dev \
+  zlib1g-dev \
+  liblzma-dev \
+  libbz2-dev \
+  libreadline-dev \
+  libsqlite3-dev \
+  libopencv-dev \
+  tk-dev \
+  git \
+\
+# Install pyenv
+&& git clone https://github.com/pyenv/pyenv.git ~/.pyenv \
+&& PYENV_ROOT="$HOME/.pyenv" \
+&& export PATH="$PYENV_ROOT/bin:$PATH" \
+&& eval "$(pyenv init --path)" \
+&& pyenv install 3.7.11 \
+&& pyenv global 3.7.11 \
 \
 # Install pip dependencies
-&& pip3 install --no-cache-dir -r requirements.txt \
-&& pip3 install --upgrade --force-reinstall --version websockets==4.0.1 \
+&& pip install --upgrade pip \
+&& pip install -r requirements.txt \
 \
 # Clean up build dependencies
-&& apk del .build-deps
+&& pip cache purge
 
 # Create volume for mapping the config
 VOLUME /usr/src/musicbot/config
 
-ENV APP_ENV=docker
+# Set pyenv environment variable
+ENV HOME /root
+ENV PYENV_ROOT $HOME/.pyenv
+ENV PATH $PYENV_ROOT/bin:$PATH
 
-ENTRYPOINT ["python3", "dockerentry.py"]
+ENV APP_ENV docker
+
+ENTRYPOINT ["bash", "/usr/src/musicbot/start.sh"]
